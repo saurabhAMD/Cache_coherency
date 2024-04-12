@@ -9,8 +9,8 @@
 #include "ex1.cpp"
 
 // Number of integers in the buffers
-const int N = 10;
-// const int N = 100;
+//const int N = 10;
+const int N = 10000;
 
 int main() 
 {
@@ -88,23 +88,25 @@ int main()
 	std::cout << "Data at each GPU BEFORE Allreduce Operation: ";
 	for (int i = 0; i < N; ++i)
 	{
-		std::cout << data[i] << " ";
+		//std::cout << data[i] << " ";
 	}
 	std::cout << std::endl;
 	std::cout << "Data at each GPU AFTER Allreduce Operation: ";
 	std::cout << std::endl;
 
 	// --Print results after Allreduce Operation
+	int sum[N];
+	int prev[N];
 	for (int i = 0; i < allreduceArgs.numGPUs; ++i) {
 		hipSetDevice(i);
 
-		int sum[N];
 		hipMemcpy(sum, allreduceArgs.recvBuffers[i], N * sizeof(int), hipMemcpyDeviceToHost);
-
 		std::cout << "GPU " << i << " has data: ";
 
 		for (int j = 0; j < N; ++j) {
 			std::cout << sum[j] << " ";
+			if((i>0) && (sum[j]!=prev[j])) std::cout<<"Error found: "<< prev[j]<< "<- ";
+			prev[j] = sum[j];
 		}
 		std::cout << std::endl;
 	}
@@ -112,6 +114,7 @@ int main()
 
 	std::cout << "Total time spent for Allreduce: " << std::fixed << std::setprecision(2) 
 		<< total_t/total_iterations << " us." << std::endl;
+
 
 	// Free and Cleanup
 	for (int i = 0; i < allreduceArgs.numGPUs; ++i) {
