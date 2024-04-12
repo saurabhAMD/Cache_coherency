@@ -9,7 +9,7 @@ __global__ void allreduceSum(int* sum, const int* dataA, const int* dataB, int s
 		sum[idx] = dataA[idx] + dataB[idx];
 	}
 	// if(idx==0)
-	printf("%d:%d, ",idx,sum[idx]);
+	//printf("%d:%d, ",idx,sum[idx]);
 }
 void allreduce(collectiveArgs allreduceArgs) 
 {
@@ -25,13 +25,14 @@ void allreduce(collectiveArgs allreduceArgs)
 
 	// Set Device to Current GPU
 	hipSetDevice(allreduceArgs.currentGPU);
-	printf("\n %d", allreduceArgs.currentGPU);
+	//printf("\n %d", allreduceArgs.currentGPU);
 
 	// Allocate Memory for temporary buffer to store data at the current GPU
 	// and copy data from the send buffer of current GPU to the temp buffer
 	int* currentData;
 	//hipMalloc(&currentData, allreduceArgs.N*sizeof(int));
-	hipExtMallocWithFlags((void**)&currentData, allreduceArgs.N*sizeof(int), hipDeviceMallocUncached);
+	hipExtMallocWithFlags((void**)&currentData, allreduceArgs.N*sizeof(int), hipDeviceMallocFinegrained);
+	// hipExtMallocWithFlags((void**)&currentData, allreduceArgs.N*sizeof(int), hipDeviceMallocUncached);
 	hipMemcpy(currentData, allreduceArgs.sendBuffers[allreduceArgs.currentGPU], allreduceArgs.N * sizeof(int), hipMemcpyDeviceToDevice);
 
 	// Perform an Allreduce Sum
@@ -40,28 +41,28 @@ void allreduce(collectiveArgs allreduceArgs)
 		// Apply the sum on all the GPUs involved
 		if (i != allreduceArgs.currentGPU)
 		{
-			printf("\nGpu %d data being added\n", i);
+			//printf("\nGpu %d data being added\n", i);
 			// Allocate memory for temporary buffer to store data to be added and 
 			// copy data from the send buffer of GPU i to the temp buffer
 			int* addData;
 			//hipMalloc(&addData, allreduceArgs.N*sizeof(int));
-			hipExtMallocWithFlags((void**)&addData, allreduceArgs.N*sizeof(int), hipDeviceMallocUncached);
-			std::printf("Malloc successful\n");
+			hipExtMallocWithFlags((void**)&addData, allreduceArgs.N*sizeof(int), hipDeviceMallocFinegrained);
+			//hipExtMallocWithFlags((void**)&addData, allreduceArgs.N*sizeof(int), hipDeviceMallocUncached);
 			hipMemcpy(addData, allreduceArgs.sendBuffers[i], allreduceArgs.N*sizeof(int), hipMemcpyDeviceToDevice);
 			
 			// Set Device to GPU being added
 			hipSetDevice(i);
 
-			// Synchronize
-			hipDeviceSynchronize();
+			// // Synchronize
+			// hipDeviceSynchronize();
 			
 			// Call allreduceSum kernel and perform the allreduce sum
 			dim3 blockDim(16);
 			dim3 gridDim((allreduceArgs.N + blockDim.x - 1) / blockDim.x);
 			allreduceSum<<<gridDim, blockDim>>>(currentData, currentData, addData, allreduceArgs.N);
 
-			// Synchronize
-			hipDeviceSynchronize();
+			// // Synchronize
+			// hipDeviceSynchronize();
 
 			// Free temporary Buffer that stored the data being added
 			hipFree(addData);
