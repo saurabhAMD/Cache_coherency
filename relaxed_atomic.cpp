@@ -1,15 +1,28 @@
 #include <hip/hip_runtime.h>
 #include "ex1.h"
 
+// Element-Wise Sum of Two Arrays
+__global__ void allreduceSumSimple(int* sum, const int* dataA, const int* dataB, int size) 
+{
+	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+	if (idx < size) {
+		sum[idx] = dataA[idx] + dataB[idx];
+	}
+	// if(idx==0)
+	//printf("%d:%d, ",idx,sum[idx]);
+}
+
 __global__ void allreduceSum(int* sum, const int* data, int size)
 {
         int idx = threadIdx.x + blockIdx.x * blockDim.x;
         if (idx < size) {
 				// if(idx%2==0) sum[idx] = sum[idx];
                 // atomicAdd(&sum[idx],data[idx]);
-				__hip_atomic_load(&sum[idx], __ATOMIC_ACQUIRE, __HIP_MEMORY_SCOPE_SYSTEM);
-				__hip_atomic_store(&sum[idx], data[idx], __ATOMIC_RELEASE, __HIP_MEMORY_SCOPE_SYSTEM);
-				//sum[idx] = sum[idx] + data[idx];
+				// __hip_atomic_load(&sum[idx], __ATOMIC_ACQUIRE, __HIP_MEMORY_SCOPE_SYSTEM);
+				// __hip_atomic_store(&sum[idx], data[idx], __ATOMIC_RELEASE, __HIP_MEMORY_SCOPE_SYSTEM);
+				__hip_atomic_load(&sum[idx], __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
+				__hip_atomic_store(&sum[idx], data[idx], __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM); //runs but doesn't sum up the values
+				// sum[idx] = sum[idx] + data[idx];
         }
 		// printf("%d:%d, ",idx,sum[idx]);
 }
